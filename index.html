@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YogaVision AI — Intelligent Posture Analysis System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.js"></script>
+  <style>
+    :root {
+      --cream: #f5f0e8;
+      --warm-white: #fdfaf4;
+      --sage: #7a9e7e;
+      --sage-dark: #557a59;
+      --terracotta: #c5603a;
+      --terracotta-light: #e8845e;
+      --charcoal: #2c2c2c;
+      --mid-grey: #6b6b6b;
+      --light-grey: #e8e4db;
+      --gold: #c9a84c;
+      --gold-light: #f0d080;
+      --error: #c0392b;
+      --success: #27ae60;
+      --info: #2980b9;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--charcoal);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(245,240,232,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--light-grey);
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem; font-weight: 900;
+      color: var(--charcoal);
+      letter-spacing: -0.5px;
+    }
+    .nav-logo span { color: var(--sage); }
+    .nav-tabs { display: flex; gap: 0.25rem; }
+    .nav-tab {
+      padding: 0.5rem 1rem;
+      border: none; background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; font-weight: 500;
+      color: var(--mid-grey); cursor: pointer;
+      border-radius: 8px; transition: all 0.2s;
+    }
+    .nav-tab:hover { background: var(--light-grey); color: var(--charcoal); }
+    .nav-tab.active { background: var(--charcoal); color: var(--cream); }
+    .nav-badge {
+      background: var(--terracotta); color: white;
+      font-size: 0.7rem; padding: 2px 6px;
+      border-radius: 10px; margin-left: 4px;
+    }
+
+    /* ── PAGES ── */
+    .page { display: none; padding-top: 64px; min-height: 100vh; }
+    .page.active { display: block; }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, var(--charcoal) 0%, #3d3d3d 50%, #2c2c2c 100%);
+      color: white; text-align: center;
+      padding: 5rem 2rem 4rem;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(122,158,126,0.25) 0%, transparent 60%),
+                  radial-gradient(ellipse at 70% 50%, rgba(197,96,58,0.15) 0%, transparent 60%);
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 700px; margin: 0 auto; }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(122,158,126,0.2); border: 1px solid rgba(122,158,126,0.4);
+      color: #a8cfac; font-size: 0.8rem; font-weight: 600;
+      padding: 0.4rem 1rem; border-radius: 20px;
+      letter-spacing: 1px; text-transform: uppercase; margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 900;
+      line-height: 1.1; margin-bottom: 1.2rem;
+    }
+    .hero h1 em { color: var(--gold-light); font-style: normal; }
+    .hero p { font-size: 1.1rem; color: rgba(255,255,255,0.7); margin-bottom: 2.5rem; line-height: 1.6; }
+    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--sage); color: white;
+      padding: 0.85rem 2rem; border: none;
+      border-radius: 12px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+    }
+    .btn-primary:hover { background: var(--sage-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(122,158,126,0.4); }
+    .btn-secondary {
+      background: transparent; color: white;
+      padding: 0.85rem 2rem; border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 12px; font-size: 1rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1px; background: var(--light-grey);
+      border-top: 1px solid var(--light-grey);
+    }
+    .stat-card {
+      background: var(--warm-white); padding: 2rem 1.5rem; text-align: center;
+    }
+    .stat-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem; font-weight: 900; color: var(--sage-dark);
+    }
+    .stat-label { font-size: 0.85rem; color: var(--mid-grey); margin-top: 0.25rem; }
+
+    /* ── POSE GALLERY ── */
+    .section { padding: 3rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;
+    }
+    .section-sub { color: var(--mid-grey); margin-bottom: 2rem; font-size: 0.95rem; }
+    .pose-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .pose-card {
+      background: var(--warm-white); border: 1px solid var(--light-grey);
+      border-radius: 16px; padding: 1.5rem; text-align: center;
+      cursor: pointer; transition: all 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .pose-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: var(--sage); transform: scaleX(0); transition: transform 0.2s;
+    }
+    .pose-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
+    .pose-card:hover::before { transform: scaleX(1); }
+    .pose-icon { font-size: 3rem; margin-bottom: 0.75rem; display: block; }
+    .pose-name { font-weight: 600; font-size: 0.95rem; color: var(--charcoal); }
+    .pose-sanskrit { font-size: 0.8rem; color: var(--mid-grey); font-style: italic; margin-top: 0.25rem; }
+    .pose-diff {
+      display: inline-block; font-size: 0.72rem; padding: 3px 8px;
+      border-radius: 8px; margin-top: 0.5rem; font-weight: 600;
+    }
+    .diff-beginner { background: #e8f5e9; color: #2e7d32; }
+    .diff-intermediate { background: #fff3e0; color: #e65100; }
+    .diff-advanced { background: #fce4ec; color: #b71c1c; }
+
+    /* ── ANALYSIS PAGE ── */
+    #page-analyze { background: var(--cream); }
+    .analyze-layout {
+      display: grid; grid-template-columns: 1fr 380px;
+      gap: 1.5rem; padding: 1.5rem; max-width: 1300px; margin: 0 auto;
+    }
+    .camera-panel {
+      background: var(--warm-white); border: 1px solid var(--light-grey);
+      border-radius: 20px; overflow: hidden; position: relative;
+    }
+    .camera-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--light-grey);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .camera-title { font-weight: 600; font-size: 0.95rem; }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--light-grey); display: inline-block; margin-right: 6px;
+    }
+    .status-dot.active { background: var(--success); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+    .camera-body { position: relative; background: #111; aspect-ratio: 4/3; }
+    .camera-body video, .camera-body canvas {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    }
+    .camera-overlay {
+      position: absolute; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 1rem; z-index: 5;
+      background: rgba(17,17,17,0.85);
+    }
+    .camera-overlay.hidden { display: none; }
+    .camera-overlay p { color: rgba(255,255,255,0.7); font-size: 0.9rem; }
+    .camera-controls {
+      padding: 1rem 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .ctrl-btn {
+      flex: 1; padding: 0.65rem 1rem;
+      border-radius: 10px; border: 1px solid var(--light-grey);
+      background: white; font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem; font-weight: 500; cursor: pointer;
+      transition: all 0.15s; color: var(--charcoal); min-width: 100px;
+    }
+    .ctrl-btn:hover { background: var(--light-grey); }
+    .ctrl-btn.danger { background: var(--terracotta); color: white; border-color: var(--terracotta); }
+    .ctrl-btn.danger:hover { background: #a84e2f; }
+    .ctrl-btn.success { background: var(--sage); color: white; border-color: var(--sage); }
+    .ctrl-btn.success:hover { background: var(--sage-dark); }
+
+    /* ── SIDE PANEL ── */
+    .side-panel { display: flex; flex-direction: column; gap: 1rem; }
+    .panel-card {
+      background: var(--warm-white); border: 1px solid var(--light-grey);
+      border-radius: 16px; overflow: hidden;
+    }
+    .panel-card-header {
+      padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--light-grey);
+      font-weight: 600; font-size: 0.9rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .panel-card-body { padding: 1.25rem; }
+
+    /* Pose selector */
+    .pose-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .pose-select-btn {
+      padding: 0.6rem 0.75rem; border-radius: 8px;
+      border: 1px solid var(--light-grey); background: white;
+      font-size: 0.8rem; font-weight: 500; cursor: pointer;
+      transition: all 0.15s; text-align: left; font-family: 'DM Sans', sans-serif;
+    }
+    .pose-select-btn:hover { border-color: var(--sage); color: var(--sage-dark); }
+    .pose-select-btn.active { background: var(--sage); color: white; border-color: var(--sage); }
+
+    /* Feedback */
+    .feedback-box {
+      background: linear-gradient(135deg, #f0f7f0, #e8f5e9);
+      border: 1px solid #c8e6c9; border-radius: 12px;
+      padding: 1rem; margin-bottom: 0.75rem;
+    }
+    .feedback-box.warning { background: linear-gradient(135deg, #fff8e1, #fff3e0); border-color: #ffe082; }
+    .feedback-box.error { background: linear-gradient(135deg, #fce4ec, #ffebee); border-color: #f48fb1; }
+    .feedback-box.info { background: linear-gradient(135deg, #e3f2fd, #e8eaf6); border-color: #90caf9; }
+    .feedback-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sage-dark); margin-bottom: 0.4rem; }
+    .feedback-text { font-size: 0.88rem; color: var(--charcoal); line-height: 1.5; }
+
+    /* Angle meters */
+    .angle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+    .angle-label { font-size: 0.82rem; color: var(--mid-grey); font-weight: 500; }
+    .angle-bar-wrap { flex: 1; margin: 0 0.75rem; height: 6px; background: var(--light-grey); border-radius: 3px; overflow: hidden; }
+    .angle-bar { height: 100%; border-radius: 3px; transition: width 0.3s; background: var(--sage); }
+    .angle-val { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--charcoal); font-weight: 600; width: 40px; text-align: right; }
+
+    /* Accuracy ring */
+    .accuracy-center { text-align: center; padding: 0.5rem 0; }
+    .accuracy-ring { position: relative; width: 100px; height: 100px; margin: 0 auto 0.75rem; }
+    .accuracy-ring svg { transform: rotate(-90deg); }
+    .accuracy-ring .bg { fill: none; stroke: var(--light-grey); stroke-width: 8; }
+    .accuracy-ring .fg { fill: none; stroke: var(--sage); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+    .accuracy-pct {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900;
+    }
+    .accuracy-label { font-size: 0.8rem; color: var(--mid-grey); }
+
+    /* Session info */
+    .session-row { display: flex; justify-content: space-between; margin-bottom: 0.6rem; align-items: center; }
+    .session-key { font-size: 0.82rem; color: var(--mid-grey); }
+    .session-val { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 600; }
+
+    /* Rep counter */
+    .rep-display {
+      display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .rep-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem; font-weight: 900; color: var(--terracotta);
+    }
+    .rep-controls button {
+      display: block; width: 36px; height: 36px;
+      border-radius: 8px; border: 1px solid var(--light-grey);
+      background: white; font-size: 1.2rem; cursor: pointer;
+      margin-bottom: 4px; font-family: 'DM Sans', sans-serif;
+    }
+    .rep-controls button:hover { background: var(--light-grey); }
+
+    /* Voice toggle */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .toggle-switch {
+      position: relative; width: 44px; height: 24px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; background: var(--light-grey);
+      border-radius: 12px; cursor: pointer; transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute;
+      width: 18px; height: 18px; left: 3px; top: 3px;
+      background: white; border-radius: 50%; transition: 0.2s;
+    }
+    input:checked + .toggle-slider { background: var(--sage); }
+    input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* ── HISTORY PAGE ── */
+    #page-history { background: var(--cream); padding: 2rem; }
+    .history-layout { max-width: 1000px; margin: 0 auto; }
+    .history-header { margin-bottom: 2rem; }
+    .history-table {
+      width: 100%; border-collapse: collapse;
+      background: var(--warm-white); border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--light-grey);
+    }
+    .history-table th {
+      padding: 0.85rem 1.25rem; text-align: left;
+      background: var(--charcoal); color: white;
+      font-size: 0.82rem; font-weight: 600; letter-spacing: 0.3px;
+    }
+    .history-table td {
+      padding: 0.85rem 1.25rem; font-size: 0.88rem;
+      border-bottom: 1px solid var(--light-grey);
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: var(--cream); }
+    .score-pill {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 8px; font-weight: 700; font-size: 0.82rem;
+    }
+    .score-high { background: #e8f5e9; color: #2e7d32; }
+    .score-mid { background: #fff3e0; color: #e65100; }
+    .score-low { background: #fce4ec; color: #b71c1c; }
+    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--mid-grey); }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+
+    /* Charts */
+    .chart-wrap { 
+      background: var(--warm-white); border: 1px solid var(--light-grey);
+      border-radius: 16px; padding: 1.5rem; margin-top: 1.5rem;
+    }
+    .chart-title { font-weight: 600; margin-bottom: 1rem; }
+    canvas.chart { width: 100% !important; height: 180px !important; }
+
+    /* ── ABOUT PAGE ── */
+    #page-about { background: var(--cream); }
+    .about-layout { max-width: 900px; margin: 0 auto; padding: 3rem 2rem; }
+    .about-card {
+      background: var(--warm-white); border: 1px solid var(--light-grey);
+      border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem;
+    }
+    .about-card h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 0.75rem; }
+    .about-card p { color: var(--mid-grey); line-height: 1.7; margin-bottom: 0.75rem; }
+    .tech-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .tech-tag {
+      background: var(--cream); border: 1px solid var(--light-grey);
+      border-radius: 8px; padding: 0.35rem 0.75rem;
+      font-size: 0.8rem; font-weight: 600; color: var(--charcoal);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pipeline-steps { counter-reset: step; }
+    .pipeline-step {
+      display: flex; gap: 1rem; margin-bottom: 1.25rem; align-items: flex-start;
+    }
+    .step-num {
+      counter-increment: step;
+      min-width: 36px; height: 36px; border-radius: 50%;
+      background: var(--sage); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem;
+    }
+    .step-content h4 { font-weight: 600; margin-bottom: 0.25rem; }
+    .step-content p { color: var(--mid-grey); font-size: 0.88rem; line-height: 1.5; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .analyze-layout { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .nav-tabs .nav-tab span.hide-sm { display: none; }
+    }
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr; }
+      .pose-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Loader */
+    .loader {
+      width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: var(--sage); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast-wrap { position: fixed; bottom: 2rem; right: 2rem; z-index: 999; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast {
+      background: var(--charcoal); color: white;
+      padding: 0.75rem 1.25rem; border-radius: 12px;
+      font-size: 0.88rem; font-weight: 500;
+      animation: toastIn 0.3s ease; max-width: 300px;
+    }
+    @keyframes toastIn { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Yoga<span>Vision</span> AI</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('home')">🏠 Home</button>
+    <button class="nav-tab" onclick="showPage('analyze')">📷 Analyze</button>
+    <button class="nav-tab" onclick="showPage('history')">📊 History</button>
+    <button class="nav-tab" onclick="showPage('about')">ℹ️ About</button>
+  </div>
+</nav>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ══════════════════════════════════════
+     PAGE: HOME
+══════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">🧘 MCA Final Year Project — Mohan Babu University</div>
+      <h1>Intelligent <em>Yoga Posture</em><br/>Analysis & Feedback</h1>
+      <p>Real-time computer vision system using MoveNet pose estimation + MLP classifier + biomechanical joint analysis. Practice safely from home with instant AI feedback.</p>
+      <div class="hero-btns">
+        <button class="btn-primary" onclick="showPage('analyze')">▶ Start Practice</button>
+        <button class="btn-secondary" onclick="showPage('about')">Learn How It Works</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num">15</div><div class="stat-label">Yoga Poses Supported</div></div>
+    <div class="stat-card"><div class="stat-num">17</div><div class="stat-label">Body Keypoints Tracked</div></div>
+    <div class="stat-card"><div class="stat-num">MLP</div><div class="stat-label">Neural Network Classifier</div></div>
+    <div class="stat-card"><div class="stat-num">≤80ms</div><div class="stat-label">Real-Time Latency</div></div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Pose Library</h2>
+    <p class="section-sub">Click any pose to open it in the analyzer</p>
+    <div class="pose-grid" id="poseGallery"></div>
+  </div>
+
+  <div class="section" style="padding-top:0;">
+    <h2 class="section-title">Key Features</h2>
+    <p class="section-sub">What makes this system unique</p>
+    <div class="pose-grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
+      <div class="pose-card"><span class="pose-icon">🤖</span><div class="pose-name">MLP Classifier</div><div class="pose-sanskrit">Multi-Layer Perceptron neural network for pose recognition</div></div>
+      <div class="pose-card"><span class="pose-icon">📐</span><div class="pose-name">Joint Angle Analysis</div><div class="pose-sanskrit">Biomechanical computation of 8 key joint angles</div></div>
+      <div class="pose-card"><span class="pose-icon">🔊</span><div class="pose-name">Voice Feedback</div><div class="pose-sanskrit">Real-time audio corrections using Web Speech API</div></div>
+      <div class="pose-card"><span class="pose-icon">📊</span><div class="pose-name">Session Tracking</div><div class="pose-sanskrit">Full history with accuracy graphs and rep counting</div></div>
+      <div class="pose-card"><span class="pose-icon">⏱️</span><div class="pose-name">Hold Timer</div><div class="pose-sanskrit">Track how long you hold each pose correctly</div></div>
+      <div class="pose-card"><span class="pose-icon">🎯</span><div class="pose-name">Difficulty Levels</div><div class="pose-sanskrit">Beginner to advanced pose recommendations</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: ANALYZE
+══════════════════════════════════════ -->
+<div class="page" id="page-analyze">
+  <div class="analyze-layout">
+
+    <!-- Camera Panel -->
+    <div class="camera-panel">
+      <div class="camera-header">
+        <span><span class="status-dot" id="statusDot"></span><span id="statusText">Camera Off</span></span>
+        <span style="font-size:0.8rem; color:var(--mid-grey);" id="fpsDisplay">0 FPS</span>
+      </div>
+      <div class="camera-body">
+        <video id="webcam" autoplay playsinline muted style="transform:scaleX(-1);"></video>
+        <canvas id="poseCanvas"></canvas>
+        <div class="camera-overlay" id="cameraOverlay">
+          <div style="font-size:3rem;">📷</div>
+          <p>Camera not started</p>
+          <button class="btn-primary" onclick="startCamera()">Enable Camera</button>
+        </div>
+      </div>
+      <div class="camera-controls">
+        <button class="ctrl-btn success" id="startBtn" onclick="startCamera()">▶ Start</button>
+        <button class="ctrl-btn danger" id="stopBtn" onclick="stopCamera()" style="display:none;">⏹ Stop</button>
+        <button class="ctrl-btn" onclick="captureSnapshot()">📸 Snapshot</button>
+        <button class="ctrl-btn" onclick="clearFeedback()">🔄 Reset</button>
+      </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="side-panel">
+
+      <!-- Pose Selector -->
+      <div class="panel-card">
+        <div class="panel-card-header">🧘 Select Target Pose</div>
+        <div class="panel-card-body">
+          <div class="pose-select-grid" id="poseSelectorGrid"></div>
+        </div>
+      </div>
+
+      <!-- Accuracy Ring -->
+      <div class="panel-card">
+        <div class="panel-card-header">🎯 Posture Accuracy</div>
+        <div class="panel-card-body accuracy-center">
+          <div class="accuracy-ring">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle class="bg" cx="50" cy="50" r="42"/>
+              <circle class="fg" id="accuracyCircle" cx="50" cy="50" r="42"
+                stroke-dasharray="264"
+                stroke-dashoffset="264"/>
+            </svg>
+            <div class="accuracy-pct" id="accuracyPct">0%</div>
+          </div>
+          <div class="accuracy-label" id="accuracyLabel">Start camera to analyze</div>
+        </div>
+      </div>
+
+      <!-- Joint Angles -->
+      <div class="panel-card">
+        <div class="panel-card-header">📐 Joint Angles</div>
+        <div class="panel-card-body" id="angleDisplay">
+          <div style="color:var(--mid-grey); font-size:0.85rem; text-align:center; padding:1rem 0;">Waiting for pose detection...</div>
+        </div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="panel-card">
+        <div class="panel-card-header">💬 Live Feedback</div>
+        <div class="panel-card-body" id="feedbackPanel">
+          <div style="color:var(--mid-grey); font-size:0.85rem; text-align:center; padding:1rem 0;">Feedback will appear here</div>
+        </div>
+      </div>
+
+      <!-- Session -->
+      <div class="panel-card">
+        <div class="panel-card-header">⏱️ Session Stats</div>
+        <div class="panel-card-body">
+          <div class="session-row"><span class="session-key">Session Time</span><span class="session-val" id="sessionTimer">00:00</span></div>
+          <div class="session-row"><span class="session-key">Frames Analyzed</span><span class="session-val" id="frameCount">0</span></div>
+          <div class="session-row"><span class="session-key">Detected Pose</span><span class="session-val" id="detectedPose">—</span></div>
+          <div class="session-row"><span class="session-key">Best Score</span><span class="session-val" id="bestScore">0%</span></div>
+          <hr style="border:none; border-top:1px solid var(--light-grey); margin: 0.5rem 0;"/>
+          <div style="margin-top:0.75rem;">
+            <div style="font-size:0.82rem; color:var(--mid-grey); margin-bottom:0.5rem; font-weight:500;">Rep Counter</div>
+            <div class="rep-display">
+              <div class="rep-num" id="repCount">0</div>
+              <div class="rep-controls">
+                <button onclick="addRep()">+</button>
+                <button onclick="removeRep()">−</button>
+              </div>
+            </div>
+          </div>
+          <hr style="border:none; border-top:1px solid var(--light-grey); margin: 0.75rem 0;"/>
+          <div class="toggle-row" style="margin-bottom:0.5rem;">
+            <span style="font-size:0.85rem; font-weight:500;">🔊 Voice Feedback</span>
+            <label class="toggle-switch"><input type="checkbox" id="voiceToggle" checked onchange="toggleVoice(this)"/><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span style="font-size:0.85rem; font-weight:500;">🦴 Show Skeleton</span>
+            <label class="toggle-switch"><input type="checkbox" id="skeletonToggle" checked/><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" style="width:100%; border-radius:12px;" onclick="saveSession()">💾 Save Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: HISTORY
+══════════════════════════════════════ -->
+<div class="page" id="page-history">
+  <div class="history-layout">
+    <div class="history-header">
+      <h2 class="section-title">Practice History</h2>
+      <p class="section-sub">Your saved sessions and performance over time</p>
+    </div>
+    <div id="historyContent"></div>
+    <div class="chart-wrap" id="chartWrap" style="display:none;">
+      <div class="chart-title">Accuracy Trend (Last 10 Sessions)</div>
+      <canvas id="accuracyChart" class="chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE: ABOUT
+══════════════════════════════════════ -->
+<div class="page" id="page-about">
+  <div class="about-layout">
+    <h2 class="section-title">About This Project</h2>
+    <p class="section-sub" style="margin-bottom:2rem;">MCA Final Year Project — Mohan Babu University, Tirupati 2025-2026</p>
+
+    <div class="about-card">
+      <h3>Project Overview</h3>
+      <p>An intelligent computer vision system for real-time yoga posture analysis and corrective feedback. The system employs a marker-less human pose estimation approach using MoveNet to capture body movements from live camera input.</p>
+      <p>A Multi-Layer Perceptron (MLP) classifier recognizes yoga postures and evaluates alignment, while a rule-based biomechanical decision mechanism analyzes joint angles against predefined thresholds.</p>
+      <div class="tech-tags">
+        <span class="tech-tag">TensorFlow.js</span>
+        <span class="tech-tag">MoveNet Lightning</span>
+        <span class="tech-tag">MLP Classifier</span>
+        <span class="tech-tag">Web Speech API</span>
+        <span class="tech-tag">Canvas API</span>
+        <span class="tech-tag">HTML5 + Vanilla JS</span>
+      </div>
+    </div>
+
+    <div class="about-card">
+      <h3>System Pipeline</h3>
+      <div class="pipeline-steps">
+        <div class="pipeline-step"><div class="step-num">1</div><div class="step-content"><h4>Video Capture</h4><p>Live webcam input captured via HTML5 MediaDevices API, mirrored for natural interaction</p></div></div>
+        <div class="pipeline-step"><div class="step-num">2</div><div class="step-content"><h4>MoveNet Pose Estimation</h4><p>MoveNet Lightning detects 17 body keypoints (nose, shoulders, elbows, wrists, hips, knees, ankles, eyes, ears) at ≤80ms latency</p></div></div>
+        <div class="pipeline-step"><div class="step-num">3</div><div class="step-content"><h4>Feature Extraction</h4><p>Keypoint coordinates normalized and joint angles computed using inverse cosine of 3-point vectors for 8 critical joints</p></div></div>
+        <div class="pipeline-step"><div class="step-num">4</div><div class="step-content"><h4>MLP Classification</h4><p>Multi-Layer Perceptron neural network (simulated) classifies the current posture from 15 supported yoga poses using 34 input features</p></div></div>
+        <div class="pipeline-step"><div class="step-num">5</div><div class="step-content"><h4>Biomechanical Validation</h4><p>Rule-based engine compares detected joint angles against ideal thresholds per pose; generates correction messages per joint</p></div></div>
+        <div class="pipeline-step"><div class="step-num">6</div><div class="step-content"><h4>Feedback Delivery</h4><p>Visual feedback on canvas overlay + text corrections + voice guidance via Web Speech API synthesis</p></div></div>
+      </div>
+    </div>
+
+    <div class="about-card">
+      <h3>Project Details</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <tr><td style="padding:0.5rem 0; color:var(--mid-grey); width:40%;">Student</td><td style="font-weight:600;">Kasuvu Ramesh</td></tr>
+        <tr><td style="padding:0.5rem 0; color:var(--mid-grey);">Roll Number</td><td style="font-weight:600;">24102D020056</td></tr>
+        <tr><td style="padding:0.5rem 0; color:var(--mid-grey);">Guide</td><td style="font-weight:600;">Dr. K. Sailaja</td></tr>
+        <tr><td style="padding:0.5rem 0; color:var(--mid-grey);">Institution</td><td style="font-weight:600;">Mohan Babu University, Tirupati</td></tr>
+        <tr><td style="padding:0.5rem 0; color:var(--mid-grey);">Academic Year</td><td style="font-weight:600;">2025-2026</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════ -->
+<script src="js/poses.js"></script>
+<script src="js/mlp.js"></script>
+<script src="js/biomech.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/history.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
