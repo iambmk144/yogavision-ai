@@ -9,7 +9,6 @@
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
 
-**MCA Final Year Project | Mohan Babu University, Tirupati | 2025–2026**
 
 [🚀 Live Demo](#live-demo) • [📸 Screenshots](#screenshots) • [⚙️ Installation](#installation) • [🧠 How It Works](#how-it-works) • [📊 Results](#results)
 
@@ -193,19 +192,6 @@ python -m http.server 8080
 
 ---
 
-## 🎓 Project Details
-
-| Field | Details |
-|---|---|
-| **Student** | Kasuvu Ramesh |
-| **Roll Number** | 24102D020056 |
-| **Project Guide** | Dr. K. Sailaja |
-| **Mentor** | Ms. P. Neeraja |
-| **Co-ordinator** | Dr. P. Baby Maruthi |
-| **Institution** | Mohan Babu University, Tirupati – 517102 |
-| **Department** | Department of Computer Applications |
-| **Academic Year** | 2025–2026 |
-
 ---
 
 ## 🔬 Difference From Reference Paper
@@ -234,16 +220,6 @@ python -m http.server 8080
 
 ---
 
-## 📚 References
-
-1. Z. Li and H. Chen, "Real-time Yoga Pose Detection on Mobile Devices Using MediaPipe," *IEEE Access*, vol. 10, pp. 13091–13103, 2022.
-2. M. Lee, F. Yang, L. Park, "Optimizing Pose Estimation for Yoga: OpenPose vs MoveNet," *J. Computational Intelligence*, vol. 30, no. 4, 2022.
-3. D.M. Kishore, S. Bindu, N.K. Manjunath, "Smart Yoga Instructor in Real Time," *Int. Journal of Yoga*, Vol. 15, Issue 3, 2022.
-4. A. Sinha, P. Jha, R. Singh, "Using PoseNet and MoveNet for Fitness Tracking," *IEEE Trans. Health Informatics*, vol. 18, no. 7, 2021.
-5. H. Dhakate et al., "Enhancing Yoga Practice: Real-time Pose Analysis," *IEEE Access*, 2024.
-6. J.S. Xiao, H.L. Li, W.X. Zhou, "A survey of human pose detection," *IEEE J. Robotics & Automation*, vol. 4, no. 2, 2022.
-7. L. Patel, M. Sharma, K. Sharma, "Evaluation of MoveNet for Yoga Pose Detection," *Int. J. Fitness & Wellness Technology*, vol. 5, no. 2, 2022.
-8. J. Singh, D. Kumar, T. Reddy, "Real-time Pose Estimation using MediaPipe," *IEEE Trans. Mobile Computing*, vol. 19, no. 8, 2021.
 
 ---
 
@@ -255,8 +231,8 @@ This project is licensed under the MIT License — feel free to use and modify f
 
 <div align="center">
 
-**Made with ❤️ by Kasuvu Ramesh**
-*MCA Final Year | Mohan Babu University | 2025–2026*
+**Made with ❤️ by Murali Krishna Basavamgari**
+
 
 ⭐ Star this repo if you found it helpful!
 
