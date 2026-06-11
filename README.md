@@ -170,8 +170,7 @@ python -m http.server 8080
 
 ## 🚀 Live Demo
 
-🌐 **[Click here to try it live]([https://yourusername.github.io/yogavision-ai/](https://iambmk144.github.io/yogavision-ai/))**
-
+🌐 https://iambmk144.github.io/yogavision-ai/
 > Allow camera permission when prompted. Works best on **Google Chrome** or **Microsoft Edge**.
 
 ---
