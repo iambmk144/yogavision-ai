@@ -15,6 +15,8 @@
 </div>
 
 ---
+## 🔗 Live Demo
+https://iambmk144.github.io/yogavision-ai/
 
 ## 📌 About The Project
 
